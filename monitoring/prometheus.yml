@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # DB Consumer metrics
+  - job_name: 'trade-consumer-db'
+    static_configs:
+      - targets: ['trade-consumer-db:8091']
+    metrics_path: '/actuator/prometheus'
+
+  # Cache Consumer metrics
+  - job_name: 'trade-consumer-cache'
+    static_configs:
+      - targets: ['trade-consumer-cache:8092']
+    metrics_path: '/actuator/prometheus'
+
+  # Kafka metrics via JMX Exporter
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka-jmx-exporter:9308']
+
+  # PostgreSQL metrics (postgres_exporter needed - optional)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Redis metrics (redis_exporter needed - optional)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']

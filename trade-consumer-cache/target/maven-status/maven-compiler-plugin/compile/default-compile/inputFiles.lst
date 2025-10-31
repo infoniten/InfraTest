@@ -1,0 +1,6 @@
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-cache/src/main/java/com/traderepository/consumer/config/KafkaConfig.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-cache/src/main/java/com/traderepository/consumer/cache/config/CacheMetricsConfig.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-cache/src/main/java/com/traderepository/consumer/config/RedisConfig.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-cache/src/main/java/com/traderepository/consumer/TradeConsumerCacheApplication.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-cache/src/main/java/com/traderepository/consumer/service/TradeCacheConsumerService.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-cache/src/main/java/com/traderepository/consumer/config/JacksonConfig.java

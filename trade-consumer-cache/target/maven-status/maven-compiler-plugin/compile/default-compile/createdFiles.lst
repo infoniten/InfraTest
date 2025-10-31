@@ -1,0 +1,4 @@
+com/traderepository/consumer/config/RedisConfig.class
+com/traderepository/consumer/config/JacksonConfig.class
+com/traderepository/consumer/cache/config/CacheMetricsConfig.class
+com/traderepository/consumer/config/KafkaConfig.class

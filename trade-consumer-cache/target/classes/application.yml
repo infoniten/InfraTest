@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: trade-consumer-cache
+
+# Kafka Configuration
+kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  group:
+    id: ${KAFKA_GROUP_ID:trade-cache-writer-group}
+  topic: ${KAFKA_TOPIC:trades}
+
+# Consumer Configuration
+consumer:
+  threads: ${CONSUMER_THREADS:10}
+
+# Redis Configuration
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+  ttl:
+    seconds: ${REDIS_TTL_SECONDS:3600}
+  pipeline:
+    size: ${REDIS_PIPELINE_SIZE:100}
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.traderepository: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+    org.springframework.data.redis: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+  file:
+    name: logs/trade-consumer-cache.log
+    max-size: 10MB
+    max-history: 30
+
+# Server Configuration
+server:
+  port: 8092

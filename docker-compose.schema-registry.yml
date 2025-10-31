@@ -1,0 +1,22 @@
+# Schema Registry extension (optional)
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.schema-registry.yml up -d
+
+services:
+  # Schema Registry (optional, for Avro support)
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: trade-schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - trade-network
+
+networks:
+  trade-network:
+    external: true

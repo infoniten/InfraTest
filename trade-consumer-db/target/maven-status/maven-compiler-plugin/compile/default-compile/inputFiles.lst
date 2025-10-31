@@ -1,0 +1,6 @@
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-db/src/main/java/com/traderepository/consumer/TradeConsumerDbApplication.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-db/src/main/java/com/traderepository/consumer/config/DatabaseConfig.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-db/src/main/java/com/traderepository/consumer/config/JacksonConfig.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-db/src/main/java/com/traderepository/consumer/config/KafkaConfig.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-db/src/main/java/com/traderepository/consumer/service/TradeDbConsumerService.java
+/Users/valerijfomin/IdeaProjects/TradeRepository/trade-consumer-db/src/main/java/com/traderepository/consumer/config/MetricsConfig.java

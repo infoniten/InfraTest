@@ -1,0 +1,4 @@
+com/traderepository/consumer/config/JacksonConfig.class
+com/traderepository/consumer/config/DatabaseConfig.class
+com/traderepository/consumer/config/KafkaConfig.class
+com/traderepository/consumer/TradeConsumerDbApplication.class
