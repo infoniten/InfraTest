@@ -41,7 +41,7 @@ services:
       - redis-data:/data
     command: >
       redis-server
-      --maxmemory 10gb
+      --maxmemory 20gb
       --maxmemory-policy allkeys-lru
       --appendonly yes
       --appendfsync everysec
@@ -118,12 +118,12 @@ services:
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
       KAFKA_CLUSTERS_0_METRICS_PORT: 9999
 
-  # Java Consumer for Database
-  trade-consumer-db:
+  # Java Consumer for Database (Writer)
+  trade-consumer-db-writer:
     build:
       context: ./trade-consumer-db
       dockerfile: Dockerfile.simple
-    container_name: trade-consumer-db
+    container_name: trade-consumer-db-writer
     depends_on:
       - kafka
       - postgres
@@ -146,12 +146,33 @@ services:
       - ./trade-consumer-db/logs:/app/logs
     restart: unless-stopped
 
-  # Java Consumer for Cache
-  trade-consumer-cache:
+  # Java Reader for Database
+  trade-consumer-db-reader:
+    build:
+      context: ./trade-consumer-db-reader
+      dockerfile: Dockerfile
+    container_name: trade-consumer-db-reader
+    depends_on:
+      - postgres
+    ports:
+      - "8093:8093"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tradedb
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+    volumes:
+      - ./trade-consumer-db-reader/logs:/app/logs
+    restart: unless-stopped
+
+  # Java Consumer for Cache (Writer)
+  trade-consumer-cache-writer:
     build:
       context: ./trade-consumer-cache
       dockerfile: Dockerfile.simple
-    container_name: trade-consumer-cache
+    container_name: trade-consumer-cache-writer
     depends_on:
       - kafka
       - redis
@@ -168,6 +189,24 @@ services:
       CONSUMER_THREADS: 10
     volumes:
       - ./trade-consumer-cache/logs:/app/logs
+    restart: unless-stopped
+
+  # Java Reader for Cache
+  trade-consumer-cache-reader:
+    build:
+      context: ./trade-consumer-cache-reader
+      dockerfile: Dockerfile
+    container_name: trade-consumer-cache-reader
+    depends_on:
+      - redis
+    ports:
+      - "8094:8094"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./trade-consumer-cache-reader/logs:/app/logs
     restart: unless-stopped
 
   # Prometheus for metrics
@@ -257,21 +296,102 @@ services:
     depends_on:
       - postgres
 
-  # Test producer for load testing
+  # Test producer for load testing (K6 with Kafka)
   trade-producer:
     build:
       context: ./test-producer
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.k6
     container_name: trade-producer
     depends_on:
       - kafka
+    volumes:
+      - ./test-scripts:/scripts
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_BROKERS: kafka:29092
       KAFKA_TOPIC: trades
-      TRADES_PER_SECOND: 700
-      DURATION_SECONDS: 60
+      TRADES_PER_SECOND: 10000
+      DURATION_SECONDS: 240
+    command: run /scripts/kafka-write-load.js
     profiles:
       - test
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'      # Limit to 1 CPU core
+          memory: 512M     # Limit to 512MB RAM
+        reservations:
+          cpus: '0.25'     # Reserve at least 0.25 CPU
+          memory: 128M     # Reserve at least 128MB RAM
+
+  # Read Load Generator for DB - generates HTTP read load on DB reader only
+  read-load-generator-db:
+    build:
+      context: ./read-load-generator
+      dockerfile: Dockerfile
+    container_name: read-load-generator-db
+    depends_on:
+      - trade-consumer-db-reader
+      - postgres
+    ports:
+      - "8095:8095"
+    environment:
+      LOAD_GENERATOR_ENABLED: "true"
+      LOAD_GENERATOR_DB_ENABLED: "true"
+      LOAD_GENERATOR_CACHE_ENABLED: "false"
+      LOAD_GENERATOR_DB_READER_URL: http://trade-consumer-db-reader:8093
+      LOAD_GENERATOR_DB_THREADS: 20
+      LOAD_GENERATOR_INTERVAL_MS: 25
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tradedb
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+    profiles:
+      - test
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'      # Limit to 0.5 CPU core
+          memory: 256M     # Limit to 256MB RAM
+        reservations:
+          cpus: '0.25'     # Reserve at least 0.25 CPU
+          memory: 128M     # Reserve at least 128MB RAM
+    restart: unless-stopped
+
+  # Read Load Generator for Cache - generates HTTP read load on Cache reader only
+  read-load-generator-cache:
+    build:
+      context: ./read-load-generator
+      dockerfile: Dockerfile
+    container_name: read-load-generator-cache
+    depends_on:
+      - trade-consumer-cache-reader
+      - postgres
+    ports:
+      - "8096:8095"
+    environment:
+      LOAD_GENERATOR_ENABLED: "true"
+      LOAD_GENERATOR_DB_ENABLED: "false"
+      LOAD_GENERATOR_CACHE_ENABLED: "true"
+      LOAD_GENERATOR_CACHE_READER_URL: http://trade-consumer-cache-reader:8094
+      LOAD_GENERATOR_CACHE_THREADS: 20
+      LOAD_GENERATOR_INTERVAL_MS: 50
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tradedb
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+    profiles:
+      - test
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'      # Limit to 0.5 CPU core
+          memory: 256M     # Limit to 256MB RAM
+        reservations:
+          cpus: '0.25'     # Reserve at least 0.25 CPU
+          memory: 128M     # Reserve at least 128MB RAM
+    restart: unless-stopped
 
   # K6 for load testing with Kafka support
   k6:
@@ -285,6 +405,14 @@ services:
       - kafka
     profiles:
       - test
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'      # Limit to 2 CPU cores
+          memory: 1G       # Limit to 1GB RAM
+        reservations:
+          cpus: '0.5'      # Reserve at least 0.5 CPU
+          memory: 256M     # Reserve at least 256MB RAM
 
 volumes:
   postgres-data:

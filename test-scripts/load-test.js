@@ -8,17 +8,32 @@ import {
     SCHEMA_TYPE_JSON,
 } from 'k6/x/kafka';
 
-// Test configuration
+// Test configuration with rate limiting
 export let options = {
-    stages: [
-        { duration: '10s', target: 100 },  // Ramp up to 100 TPS
-        { duration: '30s', target: 700 },  // Ramp up to 700 TPS
-        { duration: '60s', target: 700 },  // Stay at 700 TPS
-        { duration: '10s', target: 0 },    // Ramp down
-    ],
+    scenarios: {
+        kafka_load: {
+            executor: 'ramping-arrival-rate',
+            startRate: 100,        // Start at 100 iterations/s
+            timeUnit: '1s',
+            preAllocatedVUs: 50,   // Pre-allocated VUs
+            maxVUs: 200,           // Maximum VUs to spawn
+            stages: [
+                { duration: '10s', target: 500 },   // Ramp up to 500 TPS
+                { duration: '30s', target: 6000 },  // Ramp up to 1500 TPS
+                { duration: '60s', target: 6000 },  // Stay at 1500 TPS
+                { duration: '60s', target: 6000 },  // Stay at 1500 TPS
+                { duration: '60s', target: 6000 },  // Stay at 1500 TPS
+                { duration: '60s', target: 6000 },  // Stay at 1500 TPS
+                { duration: '60s', target: 6000 },  // Stay at 1500 TPS
+                { duration: '60s', target: 6000 },  // Stay at 1500 TPS
+                { duration: '10s', target: 0 },     // Ramp down
+            ],
+        },
+    },
     thresholds: {
-        'kafka_writer_message_count': ['rate>650'], // At least 650 TPS
-        'kafka_writer_error_count': ['count<100'],  // Less than 100 errors
+        'kafka_writer_message_count': ['rate>1000'], // At least 1000 TPS
+        'kafka_writer_error_count': ['count<100'],   // Less than 100 errors
+        'iteration_duration': ['p(95)<5000'],        // 95% of iterations under 5s
     },
 };
 

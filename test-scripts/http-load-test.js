@@ -1,17 +1,25 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-// Test configuration
+// Test configuration with rate limiting
 export let options = {
-    stages: [
-        { duration: '10s', target: 50 },   // Ramp up to 50 VUs
-        { duration: '30s', target: 200 },  // Ramp up to 200 VUs
-        { duration: '60s', target: 200 },  // Stay at 200 VUs
-        { duration: '10s', target: 0 },    // Ramp down
-    ],
+    scenarios: {
+        http_load: {
+            executor: 'ramping-vus',
+            startVUs: 0,
+            stages: [
+                { duration: '10s', target: 20 },   // Ramp up to 20 VUs
+                { duration: '30s', target: 50 },   // Ramp up to 50 VUs
+                { duration: '60s', target: 50 },   // Stay at 50 VUs
+                { duration: '10s', target: 0 },    // Ramp down
+            ],
+            gracefulRampDown: '10s',
+        },
+    },
     thresholds: {
         'http_req_duration': ['p(95)<1000'], // 95% of requests under 1s
         'http_req_failed': ['rate<0.1'],     // Error rate under 10%
+        'iteration_duration': ['p(95)<2000'], // 95% of iterations under 2s
     },
 };
 

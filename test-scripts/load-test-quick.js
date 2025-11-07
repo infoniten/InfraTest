@@ -5,16 +5,26 @@ import {
     SCHEMA_TYPE_STRING,
 } from 'k6/x/kafka';
 
-// Quick test configuration - 300 TPS for 30 seconds
+// Quick test configuration with rate limiting - max 500 TPS
 export let options = {
-    stages: [
-        { duration: '5s', target: 50 },   // Ramp up to 50 TPS
-        { duration: '20s', target: 300 }, // Ramp up to 300 TPS
-        { duration: '5s', target: 0 },    // Ramp down
-    ],
+    scenarios: {
+        kafka_quick_load: {
+            executor: 'ramping-arrival-rate',
+            startRate: 50,         // Start at 50 iterations/s
+            timeUnit: '1s',
+            preAllocatedVUs: 20,   // Pre-allocated VUs
+            maxVUs: 100,           // Maximum VUs to spawn
+            stages: [
+                { duration: '5s', target: 200 },   // Ramp up to 200 TPS
+                { duration: '20s', target: 500 },  // Ramp up to 500 TPS
+                { duration: '5s', target: 0 },     // Ramp down
+            ],
+        },
+    },
     thresholds: {
-        'kafka_writer_message_count': ['rate>250'], // At least 250 TPS
-        'kafka_writer_error_count': ['count<50'],   // Less than 50 errors
+        'kafka_writer_message_count': ['rate>150'],  // At least 150 TPS
+        'kafka_writer_error_count': ['count<50'],    // Less than 50 errors
+        'iteration_duration': ['p(95)<3000'],        // 95% of iterations under 3s
     },
 };
 

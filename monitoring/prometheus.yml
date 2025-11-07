@@ -3,16 +3,34 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  # DB Consumer metrics
-  - job_name: 'trade-consumer-db'
+  # DB Writer metrics
+  - job_name: 'trade-consumer-db-writer'
     static_configs:
-      - targets: ['trade-consumer-db:8091']
+      - targets: ['trade-consumer-db-writer:8091']
     metrics_path: '/actuator/prometheus'
 
-  # Cache Consumer metrics
-  - job_name: 'trade-consumer-cache'
+  # DB Reader metrics
+  - job_name: 'trade-consumer-db-reader'
     static_configs:
-      - targets: ['trade-consumer-cache:8092']
+      - targets: ['trade-consumer-db-reader:8093']
+    metrics_path: '/actuator/prometheus'
+
+  # Cache Writer metrics
+  - job_name: 'trade-consumer-cache-writer'
+    static_configs:
+      - targets: ['trade-consumer-cache-writer:8092']
+    metrics_path: '/actuator/prometheus'
+
+  # Cache Reader metrics
+  - job_name: 'trade-consumer-cache-reader'
+    static_configs:
+      - targets: ['trade-consumer-cache-reader:8094']
+    metrics_path: '/actuator/prometheus'
+
+  # Read Load Generator metrics
+  - job_name: 'read-load-generator'
+    static_configs:
+      - targets: ['read-load-generator:8095']
     metrics_path: '/actuator/prometheus'
 
   # Kafka metrics via JMX Exporter

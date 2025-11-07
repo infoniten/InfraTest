@@ -52,8 +52,14 @@ make logs
 # Отправить тестовую сделку
 make producer-test
 
-# Запустить нагрузочное тестирование (700 TPS, 60 сек)
+# Запустить генераторы нагрузки (write + read)
 make test-load
+
+# Остановить генераторы нагрузки
+make test-load-stop
+
+# Посмотреть статус и статистику
+make test-load-status
 
 # Открыть мониторинг
 make monitor
@@ -136,13 +142,40 @@ instrument:{symbol}:trades - Сделки по инструменту
 
 ### Нагрузочное тестирование
 
-```bash
-# Python producer (рекомендуется)
-make producer-batch  # 100 сделок
-docker-compose run --rm trade-producer  # Настраиваемое количество
+**Новая архитектура**: Раздельные генераторы для записи и чтения.
 
-# K6 load test
-make test-load  # 700 TPS в течение 60 сек
+```bash
+# Запустить оба генератора (write + read нагрузка)
+make test-load
+# - Trade Producer: 700 TPS write в Kafka
+# - Read Load Generator: ~100 TPS DB + ~400 TPS Cache
+
+# Запустить только write нагрузку
+make test-load-write
+
+# Запустить только read нагрузку
+make test-load-read
+
+# Проверить статус генераторов
+make test-load-status
+
+# Посмотреть детальную статистику
+make test-load-stats
+
+# Остановить генераторы
+make test-load-stop
+```
+
+**Подробная документация**: См. [LOAD_TESTING.md](LOAD_TESTING.md) для полного руководства по нагрузочному тестированию.
+
+**Старые методы** (все еще доступны):
+```bash
+# Одноразовая отправка
+make producer-batch  # 100 сделок
+
+# K6 тесты
+make test-load-quick  # 300 TPS, 30 сек
+make test-load-http   # HTTP load test
 ```
 
 ### Проверка данных

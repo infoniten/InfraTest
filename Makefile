@@ -1,4 +1,4 @@
-.PHONY: help up down restart logs clean test-load monitor build status health producer-test
+.PHONY: help up down restart logs clean test-load test-load-stop test-load-status test-load-write test-load-read test-load-stats monitor build status health producer-test
 
 # Colors for output
 GREEN := \033[0;32m
@@ -109,10 +109,82 @@ producer-batch: ## Send batch of test trades (100 trades)
 	docker-compose run --rm trade-producer
 	@echo "$(GREEN)Batch sent$(NC)"
 
-test-load: ## Run k6 Kafka load test (700 TPS for 60 seconds)
-	@echo "$(YELLOW)Starting k6 Kafka load test: 700 TPS for 60 seconds...$(NC)"
-	docker-compose --profile test run --rm k6 run /scripts/load-test.js
-	@echo "$(GREEN)k6 Kafka load test completed$(NC)"
+test-load: ## Start write and read load generators (trade-producer + read-load-generator-db + read-load-generator-cache)
+	@echo "$(YELLOW)Starting load generators...$(NC)"
+	@echo "$(YELLOW)1. Starting Trade Producer (6000 TPS write load)...$(NC)"
+	docker-compose --profile test up -d trade-producer
+	@echo "$(GREEN)✓ Trade Producer started$(NC)"
+	@echo "$(YELLOW)2. Starting DB Read Load Generator (~800 TPS)...$(NC)"
+	docker-compose --profile test up -d read-load-generator-db
+	@echo "$(GREEN)✓ DB Read Load Generator started$(NC)"
+	@echo "$(YELLOW)3. Starting Cache Read Load Generator (~1600 TPS)...$(NC)"
+	docker-compose --profile test up -d read-load-generator-cache
+	@echo "$(GREEN)✓ Cache Read Load Generator started$(NC)"
+	@echo ""
+	@echo "$(GREEN)Load generators are running!$(NC)"
+	@echo "$(YELLOW)Monitor:$(NC)"
+	@echo "  - Grafana Dashboard: $(GREEN)http://localhost:3000/d/tps-dashboard$(NC)"
+	@echo "  - Producer Logs: $(GREEN)docker-compose logs -f trade-producer$(NC)"
+	@echo "  - DB Read Generator Logs: $(GREEN)docker-compose logs -f read-load-generator-db$(NC)"
+	@echo "  - Cache Read Generator Logs: $(GREEN)docker-compose logs -f read-load-generator-cache$(NC)"
+	@echo "  - DB Read Metrics: $(GREEN)http://localhost:8095/actuator/prometheus$(NC)"
+	@echo "  - Cache Read Metrics: $(GREEN)http://localhost:8096/actuator/prometheus$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Stop:$(NC) make test-load-stop"
+
+test-load-stop: ## Stop all load generators
+	@echo "$(YELLOW)Stopping load generators...$(NC)"
+	docker-compose stop trade-producer read-load-generator-db read-load-generator-cache 2>/dev/null || true
+	@echo "$(GREEN)Load generators stopped$(NC)"
+
+test-load-status: ## Show status of load generators
+	@echo "$(YELLOW)Load Generator Status:$(NC)"
+	@echo ""
+	@echo -n "Trade Producer (Write):     "
+	@docker-compose ps trade-producer 2>/dev/null | grep -q "Up" && echo "$(GREEN)✓ Running$(NC)" || echo "$(RED)✗ Stopped$(NC)"
+	@echo -n "DB Read Load Generator:     "
+	@docker-compose ps read-load-generator-db 2>/dev/null | grep -q "Up" && echo "$(GREEN)✓ Running$(NC)" || echo "$(RED)✗ Stopped$(NC)"
+	@echo -n "Cache Read Load Generator:  "
+	@docker-compose ps read-load-generator-cache 2>/dev/null | grep -q "Up" && echo "$(GREEN)✓ Running$(NC)" || echo "$(RED)✗ Stopped$(NC)"
+	@echo ""
+	@$(MAKE) test-load-stats 2>/dev/null || true
+
+test-load-write: ## Start only write load (trade-producer)
+	@echo "$(YELLOW)Starting Trade Producer (write load only)...$(NC)"
+	docker-compose --profile test up -d trade-producer
+	@echo "$(GREEN)✓ Trade Producer started (6000 TPS)$(NC)"
+	@echo "Monitor: docker-compose logs -f trade-producer"
+
+test-load-read: ## Start only read load (read-load-generator-db + read-load-generator-cache)
+	@echo "$(YELLOW)Starting Read Load Generators (read load only)...$(NC)"
+	docker-compose --profile test up -d read-load-generator-db read-load-generator-cache
+	@echo "$(GREEN)✓ Read Load Generators started$(NC)"
+	@echo "  - DB Reader: ~800 TPS"
+	@echo "  - Cache Reader: ~1600 TPS"
+	@echo "Monitor:"
+	@echo "  - DB Metrics: http://localhost:8095/actuator/prometheus"
+	@echo "  - Cache Metrics: http://localhost:8096/actuator/prometheus"
+
+test-load-stats: ## Show load generator statistics
+	@echo "$(YELLOW)Load Generator Statistics:$(NC)"
+	@echo ""
+	@echo "$(GREEN)Write Load (Kafka Producer):$(NC)"
+	@docker-compose logs trade-producer 2>/dev/null | grep -E "trades sent|TPS" | tail -n 3 || echo "  Not running or no data"
+	@echo ""
+	@echo "$(GREEN)DB Read Load (HTTP Generator):$(NC)"
+	@docker-compose logs read-load-generator-db 2>/dev/null | grep "Read Load Stats" | tail -n 1 || echo "  Not running or no data"
+	@echo ""
+	@echo "$(GREEN)Cache Read Load (HTTP Generator):$(NC)"
+	@docker-compose logs read-load-generator-cache 2>/dev/null | grep "Read Load Stats" | tail -n 1 || echo "  Not running or no data"
+	@echo ""
+	@echo "$(GREEN)Write Throughput (DB Writer):$(NC)"
+	@curl -s http://localhost:8091/actuator/prometheus 2>/dev/null | grep "trades_processed_total" | grep -v "^#" || echo "  Service not available"
+	@echo ""
+	@echo "$(GREEN)DB Read Requests (from generator):$(NC)"
+	@curl -s http://localhost:8095/actuator/prometheus 2>/dev/null | grep "read_load_requests_total" | grep -v "^#" || echo "  Service not available"
+	@echo ""
+	@echo "$(GREEN)Cache Read Requests (from generator):$(NC)"
+	@curl -s http://localhost:8096/actuator/prometheus 2>/dev/null | grep "read_load_requests_total" | grep -v "^#" || echo "  Service not available"
 
 test-load-quick: ## Run quick k6 Kafka load test (300 TPS for 30 seconds)
 	@echo "$(YELLOW)Starting quick k6 Kafka load test: 300 TPS for 30 seconds...$(NC)"
