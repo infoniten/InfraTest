@@ -1,0 +1,23 @@
+FROM golang:1.24-alpine as builder
+
+WORKDIR /build
+
+# Install git (required by xk6) and xk6
+RUN apk add --no-cache git
+
+# Install xk6
+RUN go install go.k6.io/xk6/cmd/xk6@latest
+
+# Build k6 with kafka extension
+RUN xk6 build --with github.com/mostafa/xk6-kafka@latest
+
+# Runtime stage
+FROM alpine:3.18
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=builder /build/k6 /usr/bin/k6
+
+WORKDIR /scripts
+
+ENTRYPOINT ["k6"]

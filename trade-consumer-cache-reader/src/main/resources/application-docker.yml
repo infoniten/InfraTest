@@ -1,0 +1,10 @@
+server:
+  port: 8094
+
+redis:
+  host: ${REDIS_HOST:redis}
+  port: ${REDIS_PORT:6379}
+
+logging:
+  level:
+    root: INFO

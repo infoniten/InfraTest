@@ -1,0 +1,12 @@
+server:
+  port: 8093
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:tradedb}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres123}
+
+logging:
+  level:
+    root: INFO

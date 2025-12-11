@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: read-load-generator
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:tradedb}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres123}
+    driver-class-name: org.postgresql.Driver
+
+server:
+  port: 8095
+
+load:
+  generator:
+    enabled: true
+    db-reader-url: http://trade-consumer-db-reader:8093
+    cache-reader-url: http://trade-consumer-cache-reader:8094
+    db-threads: 10          # Number of concurrent DB read threads
+    cache-threads: 20       # Number of concurrent Cache read threads
+    interval-ms: 100        # Interval between requests per thread (ms)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    com.traderepository.loadgenerator: INFO
+    root: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
